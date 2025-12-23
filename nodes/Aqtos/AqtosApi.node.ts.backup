@@ -14,7 +14,7 @@ export class AqtosApi implements INodeType {
   description: INodeTypeDescription = {
     displayName: "Aqtos",
     name: "aqtosApi",
-    icon: "file:aqtos.svg",
+    icon: "file:../icons/aqtos.svg",
     group: ["input"],
     version: 1,
     description: "Consume Aqtos API",

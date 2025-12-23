@@ -10,10 +10,7 @@ export class AqtosApi implements ICredentialType {
 
   displayName = "Aqtos API";
 
-  icon: Icon = {
-    light: "file:../icons/github.svg",
-    dark: "file:../icons/github.dark.svg",
-  };
+  icon: Icon = "file:../icons/aqtos.svg"
 
   documentationUrl =
     "https://www.npmjs.com/package/n8n-nodes-aqtos#credentials";
