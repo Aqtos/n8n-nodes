@@ -1,0 +1,2836 @@
+import type {
+  IExecuteFunctions,
+  ILoadOptionsFunctions,
+  INodeExecutionData,
+  INodePropertyOptions,
+  INodeType,
+  INodeTypeDescription,
+  IHttpRequestMethods,
+  IHttpRequestOptions,
+} from "n8n-workflow";
+import { NodeConnectionTypes, NodeOperationError } from "n8n-workflow";
+
+export class AqtosApi implements INodeType {
+  description: INodeTypeDescription = {
+    displayName: "Aqtos",
+    name: "aqtosApi",
+    icon: "file:aqtos.svg",
+    group: ["input"],
+    version: 1,
+    description: "Consume Aqtos API",
+    defaults: {
+      name: "Aqtos API",
+    },
+    inputs: [NodeConnectionTypes.Main],
+    outputs: [NodeConnectionTypes.Main],
+    usableAsTool: true,
+    credentials: [
+      {
+        name: "aqtosApi",
+        required: true,
+      },
+    ],
+    properties: [
+      {
+        displayName: "Resource",
+        name: "resource",
+        type: "options",
+        noDataExpression: true,
+        options: [
+          {
+            name: "Contact",
+            value: "contact",
+          },
+          {
+            name: "Expense",
+            value: "expense",
+          },
+          {
+            name: "Invoice",
+            value: "invoice",
+          },
+          {
+            name: "Lead",
+            value: "lead",
+          },
+          {
+            name: "Task",
+            value: "task",
+          },
+        ],
+        default: "lead",
+        required: true,
+      },
+      {
+        displayName: "Operation",
+        name: "operation",
+        type: "options",
+        noDataExpression: true,
+        displayOptions: {
+          show: {
+            resource: ["contact", "expense", "invoice", "lead", "task"],
+          },
+        },
+        options: [
+          {
+            name: "Create",
+            value: "create",
+            action: "Create",
+            description: "Create a new item",
+          },
+        ],
+        default: "create",
+        required: true,
+      },
+      {
+        displayName: "Headers",
+        name: "headers",
+        type: "fixedCollection",
+        typeOptions: {
+          multipleValues: true,
+        },
+        default: {},
+        placeholder: "Add Header",
+        options: [
+          {
+            displayName: "Headers",
+            name: "headers",
+            values: [
+              {
+                displayName: "Name",
+                name: "name",
+                type: "string",
+                default: "",
+                description: "The name of the header",
+              },
+              {
+                displayName: "Value",
+                name: "value",
+                type: "string",
+                default: "",
+                description: "The value of the header",
+              },
+            ],
+          },
+        ],
+        description: "Headers to send with the request",
+      },
+      {
+        displayName: "Body Input Method",
+        name: "bodyContentType",
+        type: "options",
+        options: [
+          {
+            name: "Form Fields",
+            value: "json",
+            description: "Use structured form fields to build the request body",
+          },
+          {
+            name: "Custom JSON",
+            value: "raw",
+            description:
+              "Provide your own JSON body (sent as application/JSON)",
+          },
+        ],
+        default: "json",
+        description:
+          "Choose how to provide the request body. All requests are sent as application/JSON.",
+        displayOptions: {
+          show: {
+            resource: ["contact", "expense", "invoice", "lead", "task"],
+            operation: ["create"],
+          },
+        },
+      },
+      {
+        displayName: "Custom JSON Body",
+        name: "bodyRaw",
+        type: "json",
+        default: "{}",
+        description:
+          "The request body as JSON. Will be sent as application/JSON.",
+        displayOptions: {
+          show: {
+            resource: ["contact", "expense", "invoice", "lead", "task"],
+            operation: ["create"],
+            bodyContentType: ["raw"],
+          },
+        },
+      },
+      // Create Lead fields
+      {
+        displayName: "Name",
+        name: "leadName",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        required: true,
+        description: "The name of the lead",
+      },
+      {
+        displayName: "Email",
+        name: "leadEmail",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description: "The email address",
+      },
+      {
+        displayName: "Phone Number",
+        name: "leadPhoneNumber",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Origin",
+        name: "leadOrigin",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        required: true,
+        description: "The origin of the lead",
+      },
+      {
+        displayName: "Lead ID",
+        name: "leadId",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description: "The lead ID (optional)",
+      },
+      {
+        displayName: "Person Name or ID",
+        name: "leadPersonId",
+        type: "options",
+        typeOptions: {
+          loadOptionsMethod: "loadPersons",
+        },
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description:
+          "Choose from the list, or specify an ID using an <a href='https://docs.n8n.io/code/expressions/'>expression</a>. Choose from the list, or specify an ID using an <a href=\"https://docs.n8n.io/code/expressions/\">expression</a>.",
+      },
+      {
+        displayName: "Company Name or ID",
+        name: "leadCompanyId",
+        type: "options",
+        typeOptions: {
+          loadOptionsMethod: "loadCompanies",
+        },
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description:
+          'The company (optional). Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+      },
+      {
+        displayName: "Address City Name or ID",
+        name: "leadAddressCityId",
+        type: "options",
+        description:
+          'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Address Street",
+        name: "leadAddressStreet",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description: "The street address",
+      },
+      {
+        displayName: "Address Street Number",
+        name: "leadAddressStreetNumber",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description: "The street number",
+      },
+      {
+        displayName: "Address Zip Code",
+        name: "leadAddressZipCode",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description: "The zip code",
+      },
+      {
+        displayName: "Person Company Name or ID",
+        name: "leadPersonCompanyId",
+        type: "options",
+        typeOptions: {
+          loadOptionsMethod: "loadCompanies",
+        },
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description:
+          "Choose from the list, or specify an ID using an <a href='https://docs.n8n.io/code/expressions/'>expression</a>. Choose from the list, or specify an ID using an <a href=\"https://docs.n8n.io/code/expressions/\">expression</a>.",
+      },
+      {
+        displayName: "Job Title",
+        name: "leadJobTitle",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Budget",
+        name: "leadBudget",
+        type: "number",
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: 0,
+        description: "The budget amount",
+      },
+      {
+        displayName: "Request Title",
+        name: "leadRequestTitle",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Request Description",
+        name: "leadRequestDescription",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Website URL",
+        name: "leadWebsiteUrl",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Tax Number",
+        name: "leadTaxNumber",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Legal Identification Number",
+        name: "leadLegalIdentificationNumber",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Description",
+        name: "leadDescription",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Facebook",
+        name: "leadFacebook",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description: "Facebook URL",
+      },
+      {
+        displayName: "Twitter",
+        name: "leadTwitter",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description: "Twitter URL",
+      },
+      {
+        displayName: "LinkedIn",
+        name: "leadLinkedIn",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description: "LinkedIn URL",
+      },
+      {
+        displayName: "Inform Lead",
+        name: "leadInformLead",
+        type: "boolean",
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: false,
+        description: "Whether to inform the lead",
+      },
+      {
+        displayName: "Lead Status",
+        name: "leadStatus",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["lead"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "PENDING_CONTACT",
+      },
+      // Create Task fields
+      {
+        displayName: "Project Name or ID",
+        name: "taskProjectId",
+        type: "options",
+        typeOptions: {
+          loadOptionsMethod: "loadProjects",
+        },
+        displayOptions: {
+          show: {
+            resource: ["task"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        required: true,
+        description:
+          "Choose from the list, or specify an ID using an <a href='https://docs.n8n.io/code/expressions/'>expression</a>. Choose from the list, or specify an ID using an <a href=\"https://docs.n8n.io/code/expressions/\">expression</a>.",
+      },
+      {
+        displayName: "Title",
+        name: "taskTitle",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["task"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        required: true,
+        description: "The task title",
+      },
+      {
+        displayName: "Priority",
+        name: "taskPriority",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["task"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        required: true,
+        description: "The task priority",
+      },
+      {
+        displayName: "Parent Task Name or ID",
+        name: "taskParent",
+        type: "options",
+        typeOptions: {
+          loadOptionsMethod: "loadTasks",
+        },
+        displayOptions: {
+          show: {
+            resource: ["task"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description:
+          "Choose from the list, or specify an ID using an <a href='https://docs.n8n.io/code/expressions/'>expression</a>. Choose from the list, or specify an ID using an <a href=\"https://docs.n8n.io/code/expressions/\">expression</a>.",
+      },
+      {
+        displayName: "Creator Name or ID",
+        name: "taskCreator",
+        type: "options",
+        typeOptions: {
+          loadOptionsMethod: "loadPersons",
+        },
+        displayOptions: {
+          show: {
+            resource: ["task"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description:
+          'The creator person. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+      },
+      {
+        displayName: "Task Status Name or ID",
+        name: "taskStatusId",
+        type: "options",
+        typeOptions: {
+          loadOptionsMethod: "loadTaskStatuses",
+        },
+        displayOptions: {
+          show: {
+            resource: ["task"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description:
+          "Choose from the list, or specify an ID using an <a href='https://docs.n8n.io/code/expressions/'>expression</a>. Choose from the list, or specify an ID using an <a href=\"https://docs.n8n.io/code/expressions/\">expression</a>.",
+      },
+      {
+        displayName: "Task Category Name or ID",
+        name: "taskCategoryId",
+        type: "options",
+        typeOptions: {
+          loadOptionsMethod: "loadTaskCategories",
+        },
+        displayOptions: {
+          show: {
+            resource: ["task"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description:
+          "Choose from the list, or specify an ID using an <a href='https://docs.n8n.io/code/expressions/'>expression</a>. Choose from the list, or specify an ID using an <a href=\"https://docs.n8n.io/code/expressions/\">expression</a>.",
+      },
+      {
+        displayName: "Encrypted",
+        name: "taskEncrypted",
+        type: "boolean",
+        displayOptions: {
+          show: {
+            resource: ["task"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: false,
+        description: "Whether the task is encrypted",
+      },
+      {
+        displayName: "Assignee Names or IDs",
+        name: "taskAssignees",
+        type: "multiOptions",
+        typeOptions: {
+          loadOptionsMethod: "loadPersons",
+        },
+        displayOptions: {
+          show: {
+            resource: ["task"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: [],
+        required: true,
+        description:
+          "Choose from the list, or specify IDs using an <a href='https://docs.n8n.io/code/expressions/'>expression</a>. Choose from the list, or specify IDs using an <a href=\"https://docs.n8n.io/code/expressions/\">expression</a>.",
+      },
+      // Create Contact fields
+      {
+        displayName: "Entity Type",
+        name: "contactEntityType",
+        type: "options",
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        options: [
+          {
+            name: "Person",
+            value: "PERSON",
+          },
+          {
+            name: "Company",
+            value: "COMPANY",
+          },
+        ],
+        default: "PERSON",
+        required: true,
+        description: "The contact entity type",
+      },
+      {
+        displayName: "Contact Type",
+        name: "contactType",
+        type: "options",
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        options: [
+          {
+            name: "Contact",
+            value: "CONTACT",
+          },
+          {
+            name: "Lead",
+            value: "LEAD",
+          },
+          {
+            name: "Client",
+            value: "CLIENT",
+          },
+        ],
+        default: "CONTACT",
+        required: true,
+      },
+      {
+        displayName: "First Name",
+        name: "contactFirstName",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        required: true,
+        description: "The contact first name",
+      },
+      {
+        displayName: "Last Name",
+        name: "contactLastName",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        required: true,
+        description: "The contact last name (required)",
+      },
+      {
+        displayName: "Middle Name",
+        name: "contactMiddleName",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description: "The contact middle name (optional)",
+      },
+      {
+        displayName: "Email",
+        name: "contactEmail",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description: "The email address",
+      },
+      {
+        displayName: "Company Name or ID",
+        name: "contactCompanyId",
+        type: "options",
+        typeOptions: {
+          loadOptionsMethod: "loadCompanies",
+        },
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description:
+          'The company (optional). Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+      },
+      {
+        displayName: "Phone Number",
+        name: "contactPhoneNumber",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Address City Name or ID",
+        name: "contactAddressCityId",
+        type: "options",
+        description:
+          'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+        typeOptions: {
+        },
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Address Street",
+        name: "contactAddressStreet",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description: "The street address",
+      },
+      {
+        displayName: "Address Street Number",
+        name: "contactAddressStreetNumber",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description: "The street number",
+      },
+      {
+        displayName: "Address Zip Code",
+        name: "contactAddressZipCode",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description: "The zip code",
+      },
+      {
+        displayName: "Website URL",
+        name: "contactWebsiteUrl",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Job Title",
+        name: "contactJobTitle",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Tax Number",
+        name: "contactTaxNumber",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Legal Identification Number",
+        name: "contactLegalIdentificationNumber",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Description",
+        name: "contactDescription",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Facebook",
+        name: "contactFacebook",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description: "Facebook URL",
+      },
+      {
+        displayName: "Twitter",
+        name: "contactTwitter",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description: "Twitter URL",
+      },
+      {
+        displayName: "LinkedIn",
+        name: "contactLinkedIn",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description: "LinkedIn URL",
+      },
+      {
+        displayName: "Inform Lead",
+        name: "contactInformLead",
+        type: "boolean",
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: false,
+        description: "Whether to inform the lead",
+      },
+      {
+        displayName: "Lead Status",
+        name: "contactLeadStatus",
+        type: "options",
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        options: [
+          {
+            name: "Accepted",
+            value: "ACCEPTED",
+          },
+          {
+            name: "Contacted",
+            value: "CONTACTED",
+          },
+          {
+            name: "Created Proposal",
+            value: "CREATED_PROPOSAL",
+          },
+          {
+            name: "Disqualified",
+            value: "DISQUALIFIED",
+          },
+          {
+            name: "Negotiating",
+            value: "NEGOTIATING",
+          },
+          {
+            name: "Pending Contact",
+            value: "PENDING_CONTACT",
+          },
+          {
+            name: "Qualified",
+            value: "QUALIFIED",
+          },
+          {
+            name: "Sent",
+            value: "SENT",
+          },
+          {
+            name: "Unassigned",
+            value: "UNASSIGNED",
+          },
+        ],
+        default: "PENDING_CONTACT",
+      },
+      {
+        displayName: "Lead Request Title",
+        name: "contactLeadRequestTitle",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Lead Request Description",
+        name: "contactLeadRequestDescription",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Lead Budget",
+        name: "contactLeadBudget",
+        type: "number",
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: 0,
+      },
+      {
+        displayName: "Lead Origin",
+        name: "contactLeadOrigin",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["contact"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      // Create Expense fields
+      {
+        displayName: "Title",
+        name: "expenseTitle",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["expense"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        required: true,
+        description: "The expense title",
+      },
+      {
+        displayName: "Amount",
+        name: "expenseAmount",
+        type: "number",
+        displayOptions: {
+          show: {
+            resource: ["expense"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: 0,
+        required: true,
+        description: "The expense amount",
+      },
+      {
+        displayName: "Currency Code",
+        name: "expenseCurrencyCode",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["expense"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        required: true,
+        description: "The currency code (e.g., USD, EUR)",
+      },
+      {
+        displayName: "Status",
+        name: "expenseStatus",
+        type: "options",
+        displayOptions: {
+          show: {
+            resource: ["expense"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        options: [
+          {
+            name: "Unpaid",
+            value: "UNPAID",
+          },
+          {
+            name: "Paid",
+            value: "PAID",
+          },
+        ],
+        default: "UNPAID",
+        required: true,
+        description: "The expense status",
+      },
+      {
+        displayName: "Due Date",
+        name: "expenseDueDate",
+        type: "dateTime",
+        displayOptions: {
+          show: {
+            resource: ["expense"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        required: true,
+      },
+      {
+        displayName: "Note",
+        name: "expenseNote",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["expense"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description: "The expense note",
+      },
+      {
+        displayName: "Expense ID",
+        name: "expenseId",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["expense"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description: "The expense ID (optional)",
+      },
+      {
+        displayName: "Expense Category Name or ID",
+        name: "expenseCategoryId",
+        type: "options",
+        description:
+          'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+        typeOptions: {
+          loadOptionsMethod: "loadExpenseCategories",
+        },
+        displayOptions: {
+          show: {
+            resource: ["expense"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Recurring",
+        name: "expenseRecurring",
+        type: "boolean",
+        displayOptions: {
+          show: {
+            resource: ["expense"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: false,
+        required: true,
+        description: "Whether the expense is recurring",
+      },
+      {
+        displayName: "Recurrence Frequency",
+        name: "expenseRecurrenceFrequency",
+        type: "options",
+        displayOptions: {
+          show: {
+            resource: ["expense"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+            expenseRecurring: [true],
+          },
+        },
+        options: [
+          {
+            name: "Daily",
+            value: "DAILY",
+          },
+          {
+            name: "Weekly",
+            value: "WEEKLY",
+          },
+          {
+            name: "Monthly",
+            value: "MONTHLY",
+          },
+          {
+            name: "Yearly",
+            value: "YEARLY",
+          },
+        ],
+        default: "DAILY",
+        required: true,
+        description: "How often the expense recurs",
+      },
+      {
+        displayName: "Recurrence Interval",
+        name: "expenseRecurrenceInterval",
+        type: "number",
+        displayOptions: {
+          show: {
+            resource: ["expense"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+            expenseRecurring: [true],
+          },
+        },
+        default: 1,
+        required: true,
+        description:
+          "The interval between recurrences (e.g., 1 = every time, 2 = every other time)",
+      },
+      {
+        displayName: "Recurrence Days",
+        name: "expenseRecurrenceDays",
+        type: "multiOptions",
+        displayOptions: {
+          show: {
+            resource: ["expense"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+            expenseRecurring: [true],
+            expenseRecurrenceFrequency: ["WEEKLY"],
+          },
+        },
+        options: [
+          {
+            name: "Friday",
+            value: "FR",
+          },
+          {
+            name: "Monday",
+            value: "MO",
+          },
+          {
+            name: "Saturday",
+            value: "SA",
+          },
+          {
+            name: "Sunday",
+            value: "SU",
+          },
+          {
+            name: "Thursday",
+            value: "TH",
+          },
+          {
+            name: "Tuesday",
+            value: "TU",
+          },
+          {
+            name: "Wednesday",
+            value: "WE",
+          },
+        ],
+        default: [],
+        description:
+          "Days of the week for weekly recurrence (e.g., Mon, Wed, Fri)",
+      },
+      {
+        displayName: "Recurrence Month Days",
+        name: "expenseRecurrenceMonthDays",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["expense"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+            expenseRecurring: [true],
+            expenseRecurrenceFrequency: ["MONTHLY"],
+          },
+        },
+        default: "",
+        description:
+          "Comma-separated days of the month (1-31), e.g., '1,15' for 1st and 15th",
+      },
+      {
+        displayName: "Recurrence Week Numbers",
+        name: "expenseRecurrenceWeekNumbers",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["expense"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+            expenseRecurring: [true],
+            expenseRecurrenceFrequency: ["MONTHLY", "YEARLY"],
+          },
+        },
+        default: "",
+        description: "Comma-separated week numbers (1-53), e.g., '1,3,5'",
+      },
+      {
+        displayName: "Payment Date",
+        name: "expensePaymentDate",
+        type: "dateTime",
+        displayOptions: {
+          show: {
+            resource: ["expense"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Vendor Name or ID",
+        name: "expenseVendorId",
+        type: "options",
+        description:
+          'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+        typeOptions: {
+          loadOptionsMethod: "loadVendors",
+        },
+        displayOptions: {
+          show: {
+            resource: ["expense"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Creator Name or ID",
+        name: "expenseCreator",
+        type: "options",
+        typeOptions: {
+          loadOptionsMethod: "loadPersons",
+        },
+        displayOptions: {
+          show: {
+            resource: ["expense"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description:
+          'The creator person. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+      },
+      {
+        displayName: "Owner Account Name or ID",
+        name: "expenseIssuedToOwnerAccountId",
+        type: "options",
+        description:
+          'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+        typeOptions: {
+          loadOptionsMethod: "loadAccounts",
+        },
+        displayOptions: {
+          show: {
+            resource: ["expense"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Correlation ID",
+        name: "expenseCorrelationId",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["expense"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      // Create Invoice fields
+      {
+        displayName: "Issue Date",
+        name: "invoiceIssueDate",
+        type: "dateTime",
+        displayOptions: {
+          show: {
+            resource: ["invoice"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        required: true,
+        description: "The invoice issue date",
+      },
+      {
+        displayName: "Due Date",
+        name: "invoiceDueDate",
+        type: "dateTime",
+        displayOptions: {
+          show: {
+            resource: ["invoice"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        required: true,
+        description: "The invoice due date",
+      },
+      {
+        displayName: "Currency Code",
+        name: "invoiceCurrencyCode",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["invoice"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        required: true,
+        description: "The currency code (e.g., USD, EUR)",
+      },
+      {
+        displayName: "Invoice Type",
+        name: "invoiceType",
+        type: "options",
+        displayOptions: {
+          show: {
+            resource: ["invoice"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        options: [
+          {
+            name: "Sending",
+            value: "SENDING",
+          },
+          {
+            name: "Receiving",
+            value: "RECEIVING",
+          },
+        ],
+        default: "SENDING",
+        required: true,
+      },
+      {
+        displayName: "Tax Liberated",
+        name: "invoiceTaxLiberated",
+        type: "boolean",
+        displayOptions: {
+          show: {
+            resource: ["invoice"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: false,
+        required: true,
+        description: "Whether the invoice is tax liberated",
+      },
+      {
+        displayName: "Owner Account Name or ID",
+        name: "invoiceIssuedToOwnerAccountId",
+        type: "options",
+        description:
+          'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+        typeOptions: {
+          loadOptionsMethod: "loadAccounts",
+        },
+        displayOptions: {
+          show: {
+            resource: ["invoice"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        required: true,
+      },
+      {
+        displayName: "Receiver Contact View Name or ID",
+        name: "invoiceReceiver",
+        type: "options",
+        description:
+          'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+        typeOptions: {
+          loadOptionsMethod: "loadContactViews",
+        },
+        displayOptions: {
+          show: {
+            resource: ["invoice"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Payment Terms",
+        name: "invoicePaymentTerms",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["invoice"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Discount Percentage",
+        name: "invoiceDiscountPercentage",
+        type: "number",
+        displayOptions: {
+          show: {
+            resource: ["invoice"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: 0,
+      },
+      {
+        displayName: "Terms and Conditions",
+        name: "invoiceTermsAndConditions",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["invoice"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Send Invoice",
+        name: "invoiceSendInvoice",
+        type: "boolean",
+        displayOptions: {
+          show: {
+            resource: ["invoice"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: false,
+        description: "Whether to send the invoice",
+      },
+      {
+        displayName: "Receiving Client Contact Name or ID",
+        name: "invoiceReceivingClientContact",
+        type: "options",
+        description:
+          'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+        typeOptions: {
+          loadOptionsMethod: "loadContactViews",
+        },
+        displayOptions: {
+          show: {
+            resource: ["invoice"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+      },
+      {
+        displayName: "Send To Email",
+        name: "invoiceSendToEmail",
+        type: "string",
+        displayOptions: {
+          show: {
+            resource: ["invoice"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description: "The email address to send to",
+      },
+      {
+        displayName: "Mark As Ready",
+        name: "invoiceMarkAsReady",
+        type: "boolean",
+        displayOptions: {
+          show: {
+            resource: ["invoice"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: false,
+        description: "Whether to mark the invoice as ready",
+      },
+      {
+        displayName: "Language Name or ID",
+        name: "invoiceLanguageId",
+        type: "options",
+        typeOptions: {
+          loadOptionsMethod: "loadLanguages",
+        },
+        displayOptions: {
+          show: {
+            resource: ["invoice"],
+            operation: ["create"],
+            bodyContentType: ["json"],
+          },
+        },
+        default: "",
+        description:
+          'The natural language. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+      },
+    ],
+  };
+
+  private static buildCreateLeadBody(
+    context: IExecuteFunctions,
+    itemIndex: number
+  ): Record<string, unknown> {
+    const body: Record<string, unknown> = {};
+    const getParam = (name: string) =>
+      context.getNodeParameter(name, itemIndex, "") as string;
+    const getParamNumber = (name: string) =>
+      context.getNodeParameter(name, itemIndex, undefined) as
+        | number
+        | undefined;
+    const getParamBoolean = (name: string) =>
+      context.getNodeParameter(name, itemIndex, false) as boolean;
+
+    if (getParam("leadId")) body.leadId = getParam("leadId");
+    if (getParam("leadPersonId")) body.personId = getParam("leadPersonId");
+    if (getParam("leadCompanyId")) body.companyId = getParam("leadCompanyId");
+    // API expects name to be a Name object with 'first' property (and possibly 'last')
+    const leadName = getParam("leadName");
+    body.name = { first: leadName };
+    if (getParam("leadEmail")) body.email = getParam("leadEmail");
+    if (getParam("leadPhoneNumber"))
+      body.phoneNumber = getParam("leadPhoneNumber");
+    if (getParam("leadAddressCityId"))
+      body.addressCityId = getParam("leadAddressCityId");
+    if (getParam("leadAddressStreet"))
+      body.addressStreet = getParam("leadAddressStreet");
+    if (getParam("leadAddressStreetNumber"))
+      body.addressStreetNumber = getParam("leadAddressStreetNumber");
+    if (getParam("leadAddressZipCode"))
+      body.addressZipCode = getParam("leadAddressZipCode");
+    if (getParam("leadPersonCompanyId"))
+      body.personCompanyId = getParam("leadPersonCompanyId");
+    if (getParam("leadJobTitle")) body.jobTitle = getParam("leadJobTitle");
+    body.origin = getParam("leadOrigin");
+    if (getParamNumber("leadBudget") !== undefined)
+      body.budget = getParamNumber("leadBudget");
+    if (getParam("leadRequestTitle"))
+      body.requestTitle = getParam("leadRequestTitle");
+    if (getParam("leadRequestDescription"))
+      body.requestDescription = getParam("leadRequestDescription");
+    if (getParam("leadWebsiteUrl"))
+      body.websiteUrl = getParam("leadWebsiteUrl");
+    if (getParam("leadTaxNumber")) body.taxNumber = getParam("leadTaxNumber");
+    if (getParam("leadLegalIdentificationNumber"))
+      body.legalIdentificationNumber = getParam(
+        "leadLegalIdentificationNumber"
+      );
+    if (getParam("leadDescription"))
+      body.description = getParam("leadDescription");
+    if (getParam("leadFacebook")) body.facebook = getParam("leadFacebook");
+    if (getParam("leadTwitter")) body.twitter = getParam("leadTwitter");
+    if (getParam("leadLinkedIn")) body.linkedIn = getParam("leadLinkedIn");
+    body.informLead = getParamBoolean("leadInformLead");
+    if (getParam("leadStatus")) body.leadStatus = getParam("leadStatus");
+
+    return body;
+  }
+
+  private static buildCreateTaskBody(
+    context: IExecuteFunctions,
+    itemIndex: number
+  ): Record<string, unknown> {
+    const body: Record<string, unknown> = {};
+    const getParam = (name: string) =>
+      context.getNodeParameter(name, itemIndex, "") as string;
+    const getParamBoolean = (name: string) =>
+      context.getNodeParameter(name, itemIndex, false) as boolean;
+
+    if (getParam("taskParent")) body.parent = getParam("taskParent");
+    body.projectId = getParam("taskProjectId");
+    if (getParam("taskCreator")) body.creator = getParam("taskCreator");
+    body.title = getParam("taskTitle");
+    if (getParam("taskStatusId")) body.taskStatusId = getParam("taskStatusId");
+    if (getParam("taskCategoryId"))
+      body.taskCategoryId = getParam("taskCategoryId");
+    body.priority = getParam("taskPriority");
+    const assignees = context.getNodeParameter(
+      "taskAssignees",
+      itemIndex,
+      []
+    ) as string[];
+    if (assignees && assignees.length > 0) {
+      body.assignees = assignees;
+    }
+    body.encrypted = getParamBoolean("taskEncrypted");
+
+    return body;
+  }
+
+  private static buildCreateContactBody(
+    context: IExecuteFunctions,
+    itemIndex: number
+  ): Record<string, unknown> {
+    const body: Record<string, unknown> = {};
+    const getParam = (name: string) =>
+      context.getNodeParameter(name, itemIndex, "") as string;
+    const getParamNumber = (name: string) =>
+      context.getNodeParameter(name, itemIndex, undefined) as
+        | number
+        | undefined;
+    const getParamBoolean = (name: string) =>
+      context.getNodeParameter(name, itemIndex, false) as boolean;
+
+    // Required fields - validate they're not empty
+    const entityType = getParam("contactEntityType");
+    const type = getParam("contactType");
+    const firstName = getParam("contactFirstName");
+
+    if (!entityType || !type || !firstName) {
+      throw new NodeOperationError(
+        context.getNode(),
+        "Required fields missing: entityType, type, and firstName are required for contact creation",
+        { itemIndex }
+      );
+    }
+
+    body.entityType = entityType;
+    body.type = type;
+    // API expects name to be a Name object with 'first' (required), 'last' (required), and 'middle' (optional)
+    const lastName = getParam("contactLastName");
+    if (!lastName) {
+      throw new NodeOperationError(
+        context.getNode(),
+        "Last name is required for contact creation",
+        { itemIndex }
+      );
+    }
+    const middleName = getParam("contactMiddleName");
+    // Build name object: first and last are required, middle is optional
+    const nameObject: Record<string, string> = {
+      first: firstName,
+      last: lastName,
+    };
+    if (middleName) {
+      nameObject.middle = middleName;
+    }
+    body.name = nameObject;
+    if (getParam("contactEmail")) body.email = getParam("contactEmail");
+    if (getParam("contactCompanyId"))
+      body.companyId = getParam("contactCompanyId");
+    if (getParam("contactPhoneNumber"))
+      body.phoneNumber = getParam("contactPhoneNumber");
+    if (getParam("contactAddressCityId"))
+      body.addressCityId = getParam("contactAddressCityId");
+    if (getParam("contactAddressStreet"))
+      body.addressStreet = getParam("contactAddressStreet");
+    if (getParam("contactAddressStreetNumber"))
+      body.addressStreetNumber = getParam("contactAddressStreetNumber");
+    if (getParam("contactAddressZipCode"))
+      body.addressZipCode = getParam("contactAddressZipCode");
+    if (getParam("contactWebsiteUrl"))
+      body.websiteUrl = getParam("contactWebsiteUrl");
+    if (getParam("contactJobTitle"))
+      body.jobTitle = getParam("contactJobTitle");
+    if (getParam("contactTaxNumber"))
+      body.taxNumber = getParam("contactTaxNumber");
+    if (getParam("contactLegalIdentificationNumber"))
+      body.legalIdentificationNumber = getParam(
+        "contactLegalIdentificationNumber"
+      );
+    if (getParam("contactDescription"))
+      body.description = getParam("contactDescription");
+    if (getParam("contactFacebook"))
+      body.facebook = getParam("contactFacebook");
+    if (getParam("contactTwitter")) body.twitter = getParam("contactTwitter");
+    if (getParam("contactLinkedIn"))
+      body.linkedIn = getParam("contactLinkedIn");
+    body.informLead = getParamBoolean("contactInformLead");
+    if (getParam("contactLeadStatus"))
+      body.leadStatus = getParam("contactLeadStatus");
+    if (getParam("contactLeadRequestTitle"))
+      body.leadRequestTitle = getParam("contactLeadRequestTitle");
+    if (getParam("contactLeadRequestDescription"))
+      body.leadRequestDescription = getParam("contactLeadRequestDescription");
+    if (getParamNumber("contactLeadBudget") !== undefined)
+      body.leadBudget = getParamNumber("contactLeadBudget");
+    if (getParam("contactLeadOrigin"))
+      body.leadOrigin = getParam("contactLeadOrigin");
+
+    return body;
+  }
+
+  /**
+   * Formats a date string to include timezone information for ZonedDateTime compatibility.
+   * If the date string doesn't already have timezone info, appends 'Z' (UTC).
+   */
+  private static formatDateTimeForZonedDateTime(dateString: string): string {
+    if (!dateString) return dateString;
+
+    // If already has timezone info (Z, +, - or timezone name), return as-is
+    if (
+      dateString.includes("Z") ||
+      dateString.match(/[+-]\d{2}:?\d{2}$/) ||
+      dateString.includes("[")
+    ) {
+      return dateString;
+    }
+
+    // If it's a valid ISO date string without timezone, append 'Z' for UTC
+    // Matches patterns like "2025-12-23T00:00:00" or "2025-12-23T00:00:00.000"
+    if (dateString.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?$/)) {
+      return dateString + "Z";
+    }
+
+    // For other formats, try to parse and convert
+    try {
+      const date = new Date(dateString);
+      if (!isNaN(date.getTime())) {
+        return date.toISOString();
+      }
+    } catch {
+      // If parsing fails, return as-is
+    }
+
+    return dateString;
+  }
+
+  private static buildCreateExpenseBody(
+    context: IExecuteFunctions,
+    itemIndex: number
+  ): Record<string, unknown> {
+    const body: Record<string, unknown> = {};
+    const getParam = (name: string) =>
+      context.getNodeParameter(name, itemIndex, "") as string;
+    const getParamNumber = (name: string) =>
+      context.getNodeParameter(name, itemIndex, undefined) as
+        | number
+        | undefined;
+    const getParamBoolean = (name: string) =>
+      context.getNodeParameter(name, itemIndex, false) as boolean;
+    const getParamDateTime = (name: string) =>
+      context.getNodeParameter(name, itemIndex, "") as string;
+
+    // Validate required fields
+    const title = getParam("expenseTitle");
+    if (!title || title.trim() === "") {
+      throw new NodeOperationError(
+        context.getNode(),
+        "Title is required for expense creation",
+        { itemIndex }
+      );
+    }
+    body.title = title;
+
+    const amount = getParamNumber("expenseAmount");
+    if (amount === undefined || amount === null) {
+      throw new NodeOperationError(
+        context.getNode(),
+        "Amount is required for expense creation",
+        { itemIndex }
+      );
+    }
+    body.amount = amount;
+
+    const currencyCode = getParam("expenseCurrencyCode");
+    if (!currencyCode || currencyCode.trim() === "") {
+      throw new NodeOperationError(
+        context.getNode(),
+        "Currency code is required for expense creation",
+        { itemIndex }
+      );
+    }
+    body.currencyCode = currencyCode;
+
+    const status = getParam("expenseStatus");
+    if (!status || status.trim() === "") {
+      throw new NodeOperationError(
+        context.getNode(),
+        "Status is required for expense creation",
+        { itemIndex }
+      );
+    }
+    body.status = status;
+
+    const dueDate = getParamDateTime("expenseDueDate");
+    if (!dueDate || dueDate.trim() === "") {
+      throw new NodeOperationError(
+        context.getNode(),
+        "Due date is required for expense creation",
+        { itemIndex }
+      );
+    }
+    body.dueDate = AqtosApi.formatDateTimeForZonedDateTime(dueDate);
+
+    // Optional fields
+    if (getParam("expenseId")) body.expenseId = getParam("expenseId");
+    if (getParam("expenseNote")) body.note = getParam("expenseNote");
+    if (getParam("expenseCategoryId"))
+      body.expenseCategoryId = getParam("expenseCategoryId");
+    const recurring = getParamBoolean("expenseRecurring");
+    body.recurring = recurring;
+
+    // If recurring is true, build recurrence rule from structured fields
+    if (recurring) {
+      const frequency = getParam("expenseRecurrenceFrequency");
+      const interval = getParamNumber("expenseRecurrenceInterval");
+
+      if (!frequency || frequency.trim() === "") {
+        throw new NodeOperationError(
+          context.getNode(),
+          "Recurrence frequency is required when recurring is true",
+          { itemIndex }
+        );
+      }
+
+      if (interval === undefined || interval === null || interval < 1) {
+        throw new NodeOperationError(
+          context.getNode(),
+          "Recurrence interval is required and must be at least 1 when recurring is true",
+          { itemIndex }
+        );
+      }
+
+      // Build the iCal recurrence rule string
+      // RFC 2445 requires RRULE: prefix and no trailing semicolon
+      const ruleParts: string[] = [`FREQ=${frequency}`, `INTERVAL=${interval}`];
+
+      // Add BYDAY for weekly recurrence
+      if (frequency === "WEEKLY") {
+        const days = context.getNodeParameter(
+          "expenseRecurrenceDays",
+          itemIndex,
+          []
+        ) as string[];
+        if (days && days.length > 0) {
+          ruleParts.push(`BYDAY=${days.join(",")}`);
+        }
+      }
+
+      // Add BYMONTHDAY for monthly recurrence
+      if (frequency === "MONTHLY") {
+        const monthDays = getParam("expenseRecurrenceMonthDays");
+        if (monthDays && monthDays.trim() !== "") {
+          // Validate and clean the month days
+          const days = monthDays
+            .split(",")
+            .map((d) => d.trim())
+            .filter((d) => {
+              const num = parseInt(d, 10);
+              return !isNaN(num) && num >= 1 && num <= 31;
+            });
+          if (days.length > 0) {
+            ruleParts.push(`BYMONTHDAY=${days.join(",")}`);
+          }
+        }
+      }
+
+      // Add BYWEEKNO for monthly or yearly recurrence
+      if (frequency === "MONTHLY" || frequency === "YEARLY") {
+        const weekNumbers = getParam("expenseRecurrenceWeekNumbers");
+        if (weekNumbers && weekNumbers.trim() !== "") {
+          // Validate and clean the week numbers
+          const weeks = weekNumbers
+            .split(",")
+            .map((w) => w.trim())
+            .filter((w) => {
+              const num = parseInt(w, 10);
+              return !isNaN(num) && num >= 1 && num <= 53;
+            });
+          if (weeks.length > 0) {
+            ruleParts.push(`BYWEEKNO=${weeks.join(",")}`);
+          }
+        }
+      }
+
+      // Join parts with semicolons and add RRULE: prefix (RFC 2445 format)
+      const recurrenceRule = `RRULE:${ruleParts.join(";")}`;
+
+      // Send recurrenceRule as an object with value property (RecurrenceRule is an embeddable class)
+      body.recurrenceRule = { value: recurrenceRule };
+    }
+
+    const paymentDate = getParamDateTime("expensePaymentDate");
+    if (paymentDate && paymentDate.trim() !== "")
+      body.paymentDate = AqtosApi.formatDateTimeForZonedDateTime(paymentDate);
+    if (getParam("expenseVendorId"))
+      body.vendorId = getParam("expenseVendorId");
+    if (getParam("expenseCreator")) body.creator = getParam("expenseCreator");
+    if (getParam("expenseIssuedToOwnerAccountId"))
+      body.issuedToOwnerAccountId = getParam("expenseIssuedToOwnerAccountId");
+    if (getParam("expenseCorrelationId"))
+      body.correlationId = getParam("expenseCorrelationId");
+
+    return body;
+  }
+
+  private static buildCreateInvoiceBody(
+    context: IExecuteFunctions,
+    itemIndex: number
+  ): Record<string, unknown> {
+    const body: Record<string, unknown> = {};
+    const getParam = (name: string) =>
+      context.getNodeParameter(name, itemIndex, "") as string;
+    const getParamNumber = (name: string) =>
+      context.getNodeParameter(name, itemIndex, undefined) as
+        | number
+        | undefined;
+    const getParamBoolean = (name: string) =>
+      context.getNodeParameter(name, itemIndex, false) as boolean;
+    const getParamDateTime = (name: string) =>
+      context.getNodeParameter(name, itemIndex, "") as string;
+
+    if (getParam("invoiceReceiver"))
+      body.receiver = getParam("invoiceReceiver");
+    const issueDate = getParamDateTime("invoiceIssueDate");
+    body.issueDate = AqtosApi.formatDateTimeForZonedDateTime(issueDate);
+    const dueDate = getParamDateTime("invoiceDueDate");
+    body.dueDate = AqtosApi.formatDateTimeForZonedDateTime(dueDate);
+    body.currencyCode = getParam("invoiceCurrencyCode");
+    if (getParam("invoicePaymentTerms"))
+      body.paymentTerms = getParam("invoicePaymentTerms");
+    body.invoiceType = getParam("invoiceType");
+    body.taxLiberated = getParamBoolean("invoiceTaxLiberated");
+    body.issuedToOwnerAccountId = getParam("invoiceIssuedToOwnerAccountId");
+    if (getParamNumber("invoiceDiscountPercentage") !== undefined)
+      body.discountPercentage = getParamNumber("invoiceDiscountPercentage");
+    if (getParam("invoiceTermsAndConditions"))
+      body.termsAndConditions = getParam("invoiceTermsAndConditions");
+    body.sendInvoice = getParamBoolean("invoiceSendInvoice");
+    if (getParam("invoiceReceivingClientContact"))
+      body.receivingClientContact = getParam("invoiceReceivingClientContact");
+    if (getParam("invoiceSendToEmail"))
+      body.sendToEmail = getParam("invoiceSendToEmail");
+    if (getParamBoolean("invoiceMarkAsReady") !== undefined)
+      body.markAsReady = getParamBoolean("invoiceMarkAsReady");
+    if (getParam("invoiceLanguageId"))
+      body.languageId = getParam("invoiceLanguageId");
+
+    return body;
+  }
+
+  async loadCompanies(
+    this: ILoadOptionsFunctions
+  ): Promise<INodePropertyOptions[]> {
+    const credentials = await this.getCredentials("aqtosApi");
+    const apiKey = credentials.apiKey as string;
+    const instance = credentials.instance as string;
+    const baseURL = `https://${instance}.aqtos.io/api`;
+
+    try {
+      const response = await this.helpers.httpRequest({
+        method: "GET",
+        url: `${baseURL}/company/list`,
+        headers: {
+          "X-API-KEY": apiKey,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const companies = Array.isArray(response)
+        ? response
+        : response?.data || response?.content || [];
+      return companies.map((company: Record<string, unknown>) => ({
+        name:
+          (company.name as string) ||
+          (company.companyName as string) ||
+          `${company.id}`,
+        value: (company.id as string) || (company.companyId as string),
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async loadPersons(
+    this: ILoadOptionsFunctions
+  ): Promise<INodePropertyOptions[]> {
+    const credentials = await this.getCredentials("aqtosApi");
+    const apiKey = credentials.apiKey as string;
+    const instance = credentials.instance as string;
+    const baseURL = `https://${instance}.aqtos.io/api`;
+
+    try {
+      const response = await this.helpers.httpRequest({
+        method: "GET",
+        url: `${baseURL}/person/list`,
+        headers: {
+          "X-API-KEY": apiKey,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const persons = Array.isArray(response)
+        ? response
+        : response?.data || response?.content || [];
+      return persons.map((person: Record<string, unknown>) => {
+        const personName = person.name as Record<string, string> | undefined;
+        const firstName = personName?.first || "";
+        const lastName = personName?.last || "";
+        const fullName =
+          `${firstName} ${lastName}`.trim() || firstName || lastName;
+        const name =
+          fullName ||
+          (person.email as string) ||
+          (person.firstName as string) ||
+          `${person.id}`;
+        return {
+          name: name || `${person.id}`,
+          value: (person.id as string) || (person.personId as string),
+        };
+      });
+    } catch {
+      return [];
+    }
+  }
+
+  async loadProjects(
+    this: ILoadOptionsFunctions
+  ): Promise<INodePropertyOptions[]> {
+    const credentials = await this.getCredentials("aqtosApi");
+    const apiKey = credentials.apiKey as string;
+    const instance = credentials.instance as string;
+    const baseURL = `https://${instance}.aqtos.io/api`;
+
+    try {
+      const response = await this.helpers.httpRequest({
+        method: "GET",
+        url: `${baseURL}/project/list`,
+        headers: {
+          "X-API-KEY": apiKey,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const projects = Array.isArray(response)
+        ? response
+        : response?.data || response?.content || [];
+      return projects.map((project: Record<string, unknown>) => ({
+        name:
+          (project.name as string) ||
+          (project.projectName as string) ||
+          (project.title as string) ||
+          `${project.id}`,
+        value: (project.id as string) || (project.projectId as string),
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async loadTaskStatuses(
+    this: ILoadOptionsFunctions
+  ): Promise<INodePropertyOptions[]> {
+    const credentials = await this.getCredentials("aqtosApi");
+    const apiKey = credentials.apiKey as string;
+    const instance = credentials.instance as string;
+    const baseURL = `https://${instance}.aqtos.io/api`;
+
+    try {
+      const response = await this.helpers.httpRequest({
+        method: "GET",
+        url: `${baseURL}/taskStatus/list`,
+        headers: {
+          "X-API-KEY": apiKey,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const statuses = Array.isArray(response)
+        ? response
+        : response?.data || response?.content || [];
+      return statuses.map((status: Record<string, unknown>) => ({
+        name:
+          (status.name as string) ||
+          (status.statusName as string) ||
+          (status.label as string) ||
+          `${status.id}`,
+        value: (status.id as string) || (status.statusId as string),
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async loadTaskCategories(
+    this: ILoadOptionsFunctions
+  ): Promise<INodePropertyOptions[]> {
+    const credentials = await this.getCredentials("aqtosApi");
+    const apiKey = credentials.apiKey as string;
+    const instance = credentials.instance as string;
+    const baseURL = `https://${instance}.aqtos.io/api`;
+
+    try {
+      const response = await this.helpers.httpRequest({
+        method: "GET",
+        url: `${baseURL}/taskCategory/list`,
+        headers: {
+          "X-API-KEY": apiKey,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const categories = Array.isArray(response)
+        ? response
+        : response?.data || response?.content || [];
+      return categories.map((category: Record<string, unknown>) => ({
+        name:
+          (category.name as string) ||
+          (category.categoryName as string) ||
+          (category.label as string) ||
+          `${category.id}`,
+        value: (category.id as string) || (category.categoryId as string),
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async loadExpenseCategories(
+    this: ILoadOptionsFunctions
+  ): Promise<INodePropertyOptions[]> {
+    const credentials = await this.getCredentials("aqtosApi");
+    const apiKey = credentials.apiKey as string;
+    const instance = credentials.instance as string;
+    const baseURL = `https://${instance}.aqtos.io/api`;
+
+    try {
+      const response = await this.helpers.httpRequest({
+        method: "GET",
+        url: `${baseURL}/expenseCategory/list`,
+        headers: {
+          "X-API-KEY": apiKey,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const categories = Array.isArray(response)
+        ? response
+        : response?.data || response?.content || [];
+      return categories.map((category: Record<string, unknown>) => ({
+        name:
+          (category.name as string) ||
+          (category.categoryName as string) ||
+          (category.label as string) ||
+          `${category.id}`,
+        value: (category.id as string) || (category.categoryId as string),
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async loadVendors(
+    this: ILoadOptionsFunctions
+  ): Promise<INodePropertyOptions[]> {
+    const credentials = await this.getCredentials("aqtosApi");
+    const apiKey = credentials.apiKey as string;
+    const instance = credentials.instance as string;
+    const baseURL = `https://${instance}.aqtos.io/api`;
+
+    try {
+      const response = await this.helpers.httpRequest({
+        method: "GET",
+        url: `${baseURL}/vendor/list`,
+        headers: {
+          "X-API-KEY": apiKey,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const vendors = Array.isArray(response)
+        ? response
+        : response?.data || response?.content || [];
+      return vendors.map((vendor: Record<string, unknown>) => ({
+        name:
+          (vendor.name as string) ||
+          (vendor.vendorName as string) ||
+          `${vendor.id}`,
+        value: (vendor.id as string) || (vendor.vendorId as string),
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async loadAccounts(
+    this: ILoadOptionsFunctions
+  ): Promise<INodePropertyOptions[]> {
+    const credentials = await this.getCredentials("aqtosApi");
+    const apiKey = credentials.apiKey as string;
+    const instance = credentials.instance as string;
+    const baseURL = `https://${instance}.aqtos.io/api`;
+
+    try {
+      const response = await this.helpers.httpRequest({
+        method: "GET",
+        url: `${baseURL}/account/list`,
+        headers: {
+          "X-API-KEY": apiKey,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const accounts = Array.isArray(response)
+        ? response
+        : response?.data || response?.content || [];
+      return accounts.map((account: Record<string, unknown>) => ({
+        name:
+          (account.name as string) ||
+          (account.accountName as string) ||
+          (account.email as string) ||
+          `${account.id}`,
+        value: (account.id as string) || (account.accountId as string),
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async loadLanguages(
+    this: ILoadOptionsFunctions
+  ): Promise<INodePropertyOptions[]> {
+    const credentials = await this.getCredentials("aqtosApi");
+    const apiKey = credentials.apiKey as string;
+    const instance = credentials.instance as string;
+    const baseURL = `https://${instance}.aqtos.io/api`;
+
+    try {
+      const response = await this.helpers.httpRequest({
+        method: "GET",
+        url: `${baseURL}/language/list`,
+        headers: {
+          "X-API-KEY": apiKey,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const languages = Array.isArray(response)
+        ? response
+        : response?.data || response?.content || [];
+      return languages.map((language: Record<string, unknown>) => ({
+        name:
+          (language.name as string) ||
+          (language.languageName as string) ||
+          (language.code as string) ||
+          `${language.id}`,
+        value: (language.id as string) || (language.languageId as string),
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async loadContactViews(
+    this: ILoadOptionsFunctions
+  ): Promise<INodePropertyOptions[]> {
+    const credentials = await this.getCredentials("aqtosApi");
+    const apiKey = credentials.apiKey as string;
+    const instance = credentials.instance as string;
+    const baseURL = `https://${instance}.aqtos.io/api`;
+
+    try {
+      const response = await this.helpers.httpRequest({
+        method: "GET",
+        url: `${baseURL}/contactView/list`,
+        headers: {
+          "X-API-KEY": apiKey,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const views = Array.isArray(response)
+        ? response
+        : response?.data || response?.content || [];
+      return views.map((view: Record<string, unknown>) => ({
+        name:
+          (view.name as string) ||
+          (view.viewName as string) ||
+          (view.label as string) ||
+          `${view.id}`,
+        value: (view.id as string) || (view.viewId as string),
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async loadTasks(
+    this: ILoadOptionsFunctions
+  ): Promise<INodePropertyOptions[]> {
+    const credentials = await this.getCredentials("aqtosApi");
+    const apiKey = credentials.apiKey as string;
+    const instance = credentials.instance as string;
+    const baseURL = `https://${instance}.aqtos.io/api`;
+
+    try {
+      const response = await this.helpers.httpRequest({
+        method: "GET",
+        url: `${baseURL}/task/list`,
+        headers: {
+          "X-API-KEY": apiKey,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const tasks = Array.isArray(response)
+        ? response
+        : response?.data || response?.content || [];
+      return tasks.map((task: Record<string, unknown>) => ({
+        name: (task.title as string) || (task.name as string) || `${task.id}`,
+        value: (task.id as string) || (task.taskId as string),
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
+    const items = this.getInputData();
+    const returnData: INodeExecutionData[] = [];
+
+    // Get credentials
+    const credentials = await this.getCredentials("aqtosApi");
+    const apiKey = credentials.apiKey as string;
+    const instance = credentials.instance as string;
+    const baseURL = `https://${instance}.aqtos.io/api`;
+
+    // Iterates over all input items
+    for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
+      // Declare variables outside try block for error handling
+      let method: IHttpRequestMethods = "POST";
+      let url = "";
+      let requestBody: unknown;
+
+      try {
+        // Get node parameters
+        const resource = this.getNodeParameter("resource", itemIndex) as string;
+        const operation = this.getNodeParameter(
+          "operation",
+          itemIndex
+        ) as string;
+        const bodyContentType = this.getNodeParameter(
+          "bodyContentType",
+          itemIndex,
+          "json"
+        ) as string;
+
+        // Combine operation and resource to form action (e.g., "create" + "lead" = "createLead")
+        const action = `${operation}${resource.charAt(0).toUpperCase()}${resource.slice(1)}`;
+
+        // Map action to endpoint
+        const actionMap: Record<string, string> = {
+          createLead: "/submitCommand/CreateLeadCommand",
+          createTask: "/submitCommand/CreateTaskCommand",
+          createContact: "/submitCommand/CreateContactCommand",
+          createExpense: "/submitCommand/CreateExpenseCommand",
+          createInvoice: "/submitCommand/CreateInvoiceCommand",
+        };
+
+        const endpoint = actionMap[action];
+        if (!endpoint) {
+          throw new NodeOperationError(
+            this.getNode(),
+            `Invalid action "${action}"`
+          );
+        }
+
+        method = "POST";
+        url = `${baseURL}${endpoint}`;
+
+        const headers = this.getNodeParameter("headers", itemIndex, {}) as {
+          headers?: Array<{ name: string; value: string }>;
+        };
+
+        // Build headers - always use application/json
+        const requestHeaders: Record<string, string> = {
+          "X-API-KEY": apiKey,
+          "Content-Type": "application/json",
+        };
+        if (headers.headers) {
+          for (const header of headers.headers) {
+            if (header.name && header.value) {
+              // Don't allow overriding Content-Type - it must be application/json
+              if (header.name.toLowerCase() !== "content-type") {
+                requestHeaders[header.name] = header.value;
+              }
+            }
+          }
+        }
+
+        // Prepare body
+        requestBody = undefined;
+
+        if (bodyContentType === "json") {
+          // Build request body based on action using form fields
+          if (action === "createLead") {
+            requestBody = AqtosApi.buildCreateLeadBody(this, itemIndex);
+          } else if (action === "createTask") {
+            requestBody = AqtosApi.buildCreateTaskBody(this, itemIndex);
+          } else if (action === "createContact") {
+            requestBody = AqtosApi.buildCreateContactBody(this, itemIndex);
+          } else if (action === "createExpense") {
+            requestBody = AqtosApi.buildCreateExpenseBody(this, itemIndex);
+          } else if (action === "createInvoice") {
+            requestBody = AqtosApi.buildCreateInvoiceBody(this, itemIndex);
+          }
+        } else if (bodyContentType === "raw") {
+          // User provides custom JSON body
+          const bodyRaw = this.getNodeParameter("bodyRaw", itemIndex, {}) as
+            | string
+            | Record<string, unknown>;
+
+          if (bodyRaw) {
+            // If it's a string, try to parse it as JSON
+            if (typeof bodyRaw === "string") {
+              try {
+                requestBody = JSON.parse(bodyRaw);
+              } catch (parseError) {
+                throw new NodeOperationError(
+                  this.getNode(),
+                  `Invalid JSON in custom body: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+                  { itemIndex }
+                );
+              }
+            } else {
+              // Already an object, use it directly
+              requestBody = bodyRaw;
+            }
+          }
+        }
+
+        // Prepare request options
+        const requestOptions: IHttpRequestOptions = {
+          method: method as IHttpRequestMethods,
+          url,
+          headers: requestHeaders,
+          ...(requestBody !== undefined && { body: requestBody }),
+        };
+
+        // Make the HTTP request
+        const response = await this.helpers.httpRequest(requestOptions);
+
+        // Return the response data
+        returnData.push({
+          json: response,
+          pairedItem: {
+            item: itemIndex,
+          },
+        });
+      } catch (error: unknown) {
+        // Extract more detailed error information
+        // n8n's httpRequest can throw errors with different structures
+        const errorObj = error as {
+          message?: string;
+          statusCode?: number;
+          code?: string;
+          response?: {
+            body?: string | Record<string, unknown>;
+            headers?: Record<string, unknown>;
+            statusCode?: number;
+            data?: string | Record<string, unknown>;
+          };
+          context?: {
+            itemIndex?: number;
+            description?: string;
+          };
+          // Some error libraries put response data in different places
+          data?: string | Record<string, unknown>;
+        };
+
+        let errorMessage = errorObj.message || "Request failed";
+        let errorDescription: string | undefined;
+
+        // Try to extract status code from various locations
+        let statusCode = errorObj.statusCode || errorObj.response?.statusCode;
+
+        // If status code not found, try to extract it from the error message
+        if (!statusCode && errorObj.message) {
+          const statusMatch = errorObj.message.match(/status code (\d+)/i);
+          if (statusMatch) {
+            statusCode = parseInt(statusMatch[1], 10);
+          }
+        }
+
+        // Try to extract response body for more context
+        // Check multiple possible locations for response body
+        const responseBody =
+          errorObj.response?.body || errorObj.response?.data || errorObj.data;
+        if (responseBody) {
+          if (typeof responseBody === "string") {
+            // Try to parse as JSON if it looks like JSON
+            try {
+              const parsed = JSON.parse(responseBody);
+              if (typeof parsed === "object" && parsed !== null) {
+                const body = parsed as Record<string, unknown>;
+                // Try multiple common error message fields
+                errorDescription =
+                  (body.message as string) ||
+                  (body.error as string) ||
+                  (body.detail as string) ||
+                  (body.description as string) ||
+                  (body.errorMessage as string) ||
+                  (body.errors as string) ||
+                  (Array.isArray(body.errors)
+                    ? JSON.stringify(body.errors)
+                    : undefined) ||
+                  // If no standard error field, show the full response for debugging
+                  JSON.stringify(body, null, 2);
+              } else {
+                errorDescription = responseBody;
+              }
+            } catch {
+              // Not JSON, use as-is
+              errorDescription = responseBody;
+            }
+          } else if (typeof responseBody === "object") {
+            // Try common error message fields
+            const body = responseBody as Record<string, unknown>;
+            errorDescription =
+              (body.message as string) ||
+              (body.error as string) ||
+              (body.detail as string) ||
+              (body.description as string) ||
+              (body.errorMessage as string) ||
+              (body.errors as string) ||
+              (Array.isArray(body.errors)
+                ? JSON.stringify(body.errors)
+                : undefined) ||
+              // If no standard error field, show the full response for debugging
+              JSON.stringify(responseBody, null, 2);
+          }
+        }
+
+        // Build error message with context
+        if (statusCode) {
+          errorMessage = `Request failed with status code ${statusCode}`;
+
+          // Add request context for better debugging
+          const requestContext: string[] = [];
+          if (method) {
+            requestContext.push(`Method: ${method}`);
+          }
+          if (url) {
+            requestContext.push(`URL: ${url}`);
+          }
+
+          if (requestContext.length > 0) {
+            errorMessage += ` (${requestContext.join(", ")})`;
+          }
+
+          if (errorDescription) {
+            errorMessage += `: ${errorDescription}`;
+          } else if (
+            errorObj.message &&
+            errorObj.message !== "Request failed"
+          ) {
+            errorMessage += `: ${errorObj.message}`;
+          }
+
+          // For 500 errors, include request body in description for debugging
+          if (statusCode === 500 && requestBody !== undefined) {
+            const bodyPreview =
+              typeof requestBody === "object"
+                ? JSON.stringify(requestBody, null, 2)
+                : String(requestBody);
+            if (!errorDescription) {
+              errorDescription = `Request body: ${bodyPreview}`;
+            } else {
+              errorDescription += `\n\nRequest body: ${bodyPreview}`;
+            }
+          }
+        } else if (errorObj.code) {
+          // Handle errors with code property
+          // If we extracted a status code from the message, treat as HTTP error
+          if (statusCode) {
+            errorMessage = `Request failed with status code ${statusCode}`;
+            if (url) {
+              errorMessage += ` (URL: ${url})`;
+            }
+            if (errorDescription) {
+              errorMessage += `: ${errorDescription}`;
+            } else if (
+              errorObj.message &&
+              !errorObj.message.includes("status code")
+            ) {
+              errorMessage += `: ${errorObj.message}`;
+            }
+
+            // For 500 errors, include request body in description for debugging
+            if (statusCode === 500 && requestBody !== undefined) {
+              const bodyPreview =
+                typeof requestBody === "object"
+                  ? JSON.stringify(requestBody, null, 2)
+                  : String(requestBody);
+              if (!errorDescription) {
+                errorDescription = `Request body: ${bodyPreview}`;
+              } else {
+                errorDescription += `\n\nRequest body: ${bodyPreview}`;
+              }
+            }
+          } else {
+            // True network/connection error (no status code)
+            errorMessage = `Request failed: ${errorObj.code}`;
+            if (errorObj.message) {
+              errorMessage += ` - ${errorObj.message}`;
+            }
+            if (url) {
+              errorMessage += ` (URL: ${url})`;
+            }
+          }
+        }
+
+        if (this.continueOnFail()) {
+          const nodeError = new NodeOperationError(
+            this.getNode(),
+            errorMessage,
+            {
+              itemIndex,
+              description: errorDescription,
+            }
+          );
+
+          returnData.push({
+            json: this.getInputData(itemIndex)[0].json,
+            error: nodeError,
+            pairedItem: {
+              item: itemIndex,
+            },
+          });
+        } else {
+          if (errorObj.context) {
+            errorObj.context.itemIndex = itemIndex;
+            if (errorDescription) {
+              errorObj.context.description = errorDescription;
+            }
+            throw error;
+          }
+
+          throw new NodeOperationError(this.getNode(), errorMessage, {
+            itemIndex,
+            description: errorDescription,
+          });
+        }
+      }
+    }
+
+    return [returnData];
+  }
+}
