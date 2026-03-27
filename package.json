@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-aqtos",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Aqtos API node for n8n",
   "license": "MIT",
   "homepage": "https://aqtos.com",
@@ -13,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Aqtos/n8n-nodes.git"
+    "url": "git+https://github.com/Aqtos/n8n-nodes.git"
   },
   "scripts": {
     "build": "n8n-node build",
@@ -22,7 +22,7 @@
     "lint": "n8n-node lint",
     "lint:fix": "n8n-node lint --fix",
     "release": "n8n-node release",
-    "prepublishOnly": "n8n-node prerelease"
+    "prepublishOnly": "npm run build"
   },
   "files": [
     "dist"

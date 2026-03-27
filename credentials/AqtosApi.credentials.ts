@@ -1,4 +1,5 @@
 import type {
+  IAuthenticateGeneric,
   Icon,
   ICredentialTestRequest,
   ICredentialType,
@@ -38,13 +39,19 @@ export class AqtosApi implements ICredentialType {
     },
   ];
 
+  authenticate: IAuthenticateGeneric = {
+    type: "generic",
+    properties: {
+      headers: {
+        "X-API-KEY": "={{$credentials.apiKey}}",
+      },
+    },
+  };
+
   test: ICredentialTestRequest = {
     request: {
       url: "={{ 'https://' + $credentials.instance + '.aqtos.io/api/person/list' }}",
       method: "GET",
-      headers: {
-        "X-API-KEY": "={{ $credentials.apiKey }}",
-      },
     },
   };
 }
