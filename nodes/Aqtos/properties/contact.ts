@@ -14,12 +14,12 @@ export const contactProperties: INodeProperties[] = [
     },
     options: [
       {
-        name: "Person",
-        value: "PERSON",
-      },
-      {
         name: "Company",
         value: "COMPANY",
+      },
+      {
+        name: "Person",
+        value: "PERSON",
       },
     ],
     default: "PERSON",
@@ -39,16 +39,16 @@ export const contactProperties: INodeProperties[] = [
     },
     options: [
       {
+        name: "Client",
+        value: "CLIENT",
+      },
+      {
         name: "Contact",
         value: "CONTACT",
       },
       {
         name: "Lead",
         value: "LEAD",
-      },
-      {
-        name: "Client",
-        value: "CLIENT",
       },
     ],
     default: "CONTACT",

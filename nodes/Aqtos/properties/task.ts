@@ -18,7 +18,7 @@ export const taskProperties: INodeProperties[] = [
     default: "",
     required: true,
     description:
-      "Choose from the list, or specify an ID using an <a href='https://docs.n8n.io/code/expressions/'>expression</a>. Choose from the list, or specify an ID using an <a href=\"https://docs.n8n.io/code/expressions/\">expression</a>.",
+      'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
   },
   {
     displayName: "Title",
@@ -48,20 +48,20 @@ export const taskProperties: INodeProperties[] = [
     },
     options: [
       {
-        name: "Low",
-        value: "LOW",
-      },
-      {
-        name: "Medium",
-        value: "MEDIUM",
+        name: "Critical",
+        value: "CRITICAL",
       },
       {
         name: "High",
         value: "HIGH",
       },
       {
-        name: "Critical",
-        value: "CRITICAL",
+        name: "Medium",
+        value: "MEDIUM",
+      },
+      {
+        name: "Low",
+        value: "LOW",
       },
     ],
     default: "MEDIUM",
@@ -85,7 +85,7 @@ export const taskProperties: INodeProperties[] = [
     },
     default: "",
     description:
-      "Choose from the list, or specify an ID using an <a href='https://docs.n8n.io/code/expressions/'>expression</a>. Choose from the list, or specify an ID using an <a href=\"https://docs.n8n.io/code/expressions/\">expression</a>.",
+      'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
   },
   {
     displayName: "Task Category Name or ID",
@@ -104,7 +104,7 @@ export const taskProperties: INodeProperties[] = [
     },
     default: "",
     description:
-      "Choose from the list, or specify an ID using an <a href='https://docs.n8n.io/code/expressions/'>expression</a>. Choose from the list, or specify an ID using an <a href=\"https://docs.n8n.io/code/expressions/\">expression</a>.",
+      'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
   },
   {
     displayName: "Encrypted",
@@ -138,6 +138,6 @@ export const taskProperties: INodeProperties[] = [
     default: [],
     required: true,
     description:
-      "Choose from the list, or specify IDs using an <a href='https://docs.n8n.io/code/expressions/'>expression</a>. Choose from the list, or specify IDs using an <a href=\"https://docs.n8n.io/code/expressions/\">expression</a>.",
+      'Choose from the list, or specify IDs using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
   },
 ];

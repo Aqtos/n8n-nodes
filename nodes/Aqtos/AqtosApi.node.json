@@ -1,8 +1,8 @@
 {
-  "node": "n8n-nodes-aqtosapi",
+  "node": "n8n-nodes-aqtos.aqtosApi",
   "nodeVersion": "1.0",
   "codexVersion": "1.0",
-  "categories": ["API"],
+  "categories": ["Utility"],
   "resources": {
     "credentialDocumentation": [
       {

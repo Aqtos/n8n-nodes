@@ -59,12 +59,12 @@ export const expenseProperties: INodeProperties[] = [
     },
     options: [
       {
-        name: "Unpaid",
-        value: "UNPAID",
-      },
-      {
         name: "Paid",
         value: "PAID",
+      },
+      {
+        name: "Unpaid",
+        value: "UNPAID",
       },
     ],
     default: "UNPAID",
@@ -165,12 +165,12 @@ export const expenseProperties: INodeProperties[] = [
         value: "DAILY",
       },
       {
-        name: "Weekly",
-        value: "WEEKLY",
-      },
-      {
         name: "Monthly",
         value: "MONTHLY",
+      },
+      {
+        name: "Weekly",
+        value: "WEEKLY",
       },
       {
         name: "Yearly",

@@ -6,22 +6,24 @@ export async function loadCompanies(
   this: ILoadOptionsFunctions
 ): Promise<INodePropertyOptions[]> {
   const credentials = await this.getCredentials("aqtosApi");
-  const apiKey = credentials.apiKey as string;
   const baseURL = getBaseURL(credentials);
 
   try {
-    const response = await this.helpers.httpRequest({
-      method: "GET",
-      url: `${baseURL}/companies/all`,
-      headers: {
-        "X-API-KEY": apiKey,
-        "Content-Type": "application/json",
+    const response = await this.helpers.httpRequestWithAuthentication.call(
+      this,
+      "aqtosApi",
+      {
+        method: "GET",
+        url: `${baseURL}/companies/all`,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        qs: {
+          page: 0,
+          size: 100,
+        },
       },
-      qs: {
-        page: 0,
-        size: 100,
-      },
-    });
+    );
 
     // Handle Page<CompanyView> response structure (Spring Page has 'content' array)
     const companies = Array.isArray(response)
@@ -59,18 +61,20 @@ export async function loadPersons(
   this: ILoadOptionsFunctions
 ): Promise<INodePropertyOptions[]> {
   const credentials = await this.getCredentials("aqtosApi");
-  const apiKey = credentials.apiKey as string;
   const baseURL = getBaseURL(credentials);
 
   try {
-    const response = await this.helpers.httpRequest({
-      method: "GET",
-      url: `${baseURL}/person/list`,
-      headers: {
-        "X-API-KEY": apiKey,
-        "Content-Type": "application/json",
+    const response = await this.helpers.httpRequestWithAuthentication.call(
+      this,
+      "aqtosApi",
+      {
+        method: "GET",
+        url: `${baseURL}/person/list`,
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
 
     const persons = Array.isArray(response)
       ? response
@@ -91,8 +95,10 @@ export async function loadPersons(
         value: (person.id as string) || (person.personId as string),
       };
     });
-  } catch {
-    return [];
+  } catch (error) {
+    throw new NodeOperationError(this.getNode(), error as Error, {
+      message: `Failed to load persons from ${baseURL}/person/list`,
+    });
   }
 }
 
@@ -100,18 +106,20 @@ export async function loadProjects(
   this: ILoadOptionsFunctions
 ): Promise<INodePropertyOptions[]> {
   const credentials = await this.getCredentials("aqtosApi");
-  const apiKey = credentials.apiKey as string;
   const baseURL = getBaseURL(credentials);
 
   try {
-    const response = await this.helpers.httpRequest({
-      method: "GET",
-      url: `${baseURL}/projects/all`,
-      headers: {
-        "X-API-KEY": apiKey,
-        "Content-Type": "application/json",
+    const response = await this.helpers.httpRequestWithAuthentication.call(
+      this,
+      "aqtosApi",
+      {
+        method: "GET",
+        url: `${baseURL}/projects/all`,
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
 
     const projects = Array.isArray(response)
       ? response
@@ -124,8 +132,10 @@ export async function loadProjects(
         `${project.id}`,
       value: (project.id as string) || (project.projectId as string),
     }));
-  } catch {
-    return [];
+  } catch (error) {
+    throw new NodeOperationError(this.getNode(), error as Error, {
+      message: `Failed to load projects from ${baseURL}/projects/all`,
+    });
   }
 }
 
@@ -133,7 +143,6 @@ export async function loadTaskStatuses(
   this: ILoadOptionsFunctions
 ): Promise<INodePropertyOptions[]> {
   const credentials = await this.getCredentials("aqtosApi");
-  const apiKey = credentials.apiKey as string;
   const baseURL = getBaseURL(credentials);
 
   // Get the selected project ID from the node parameters
@@ -145,17 +154,20 @@ export async function loadTaskStatuses(
   }
 
   try {
-    const response = await this.helpers.httpRequest({
-      method: "GET",
-      url: `${baseURL}/taskStatus/all`,
-      headers: {
-        "X-API-KEY": apiKey,
-        "Content-Type": "application/json",
+    const response = await this.helpers.httpRequestWithAuthentication.call(
+      this,
+      "aqtosApi",
+      {
+        method: "GET",
+        url: `${baseURL}/taskStatus/all`,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        qs: {
+          projectId: projectId,
+        },
       },
-      qs: {
-        projectId: projectId,
-      },
-    });
+    );
 
     const statuses = Array.isArray(response)
       ? response
@@ -168,8 +180,10 @@ export async function loadTaskStatuses(
         `${status.id}`,
       value: (status.id as string) || (status.statusId as string),
     }));
-  } catch {
-    return [];
+  } catch (error) {
+    throw new NodeOperationError(this.getNode(), error as Error, {
+      message: `Failed to load task statuses from ${baseURL}/taskStatus/all`,
+    });
   }
 }
 
@@ -177,7 +191,6 @@ export async function loadProjectPeople(
   this: ILoadOptionsFunctions
 ): Promise<INodePropertyOptions[]> {
   const credentials = await this.getCredentials("aqtosApi");
-  const apiKey = credentials.apiKey as string;
   const baseURL = getBaseURL(credentials);
 
   // Get the selected project ID from the node parameters
@@ -189,17 +202,20 @@ export async function loadProjectPeople(
   }
 
   try {
-    const response = await this.helpers.httpRequest({
-      method: "GET",
-      url: `${baseURL}/projects/people`,
-      headers: {
-        "X-API-KEY": apiKey,
-        "Content-Type": "application/json",
+    const response = await this.helpers.httpRequestWithAuthentication.call(
+      this,
+      "aqtosApi",
+      {
+        method: "GET",
+        url: `${baseURL}/projects/people`,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        qs: {
+          projectId: projectId,
+        },
       },
-      qs: {
-        projectId: projectId,
-      },
-    });
+    );
 
     const people = Array.isArray(response)
       ? response
@@ -220,8 +236,10 @@ export async function loadProjectPeople(
         value: (person.id as string) || (person.personId as string),
       };
     });
-  } catch {
-    return [];
+  } catch (error) {
+    throw new NodeOperationError(this.getNode(), error as Error, {
+      message: `Failed to load project people from ${baseURL}/projects/people`,
+    });
   }
 }
 
@@ -229,7 +247,6 @@ export async function loadTaskCategories(
   this: ILoadOptionsFunctions
 ): Promise<INodePropertyOptions[]> {
   const credentials = await this.getCredentials("aqtosApi");
-  const apiKey = credentials.apiKey as string;
   const baseURL = getBaseURL(credentials);
 
   // Get the selected project ID from the node parameters
@@ -241,17 +258,20 @@ export async function loadTaskCategories(
   }
 
   try {
-    const response = await this.helpers.httpRequest({
-      method: "GET",
-      url: `${baseURL}/taskCategory/all`,
-      headers: {
-        "X-API-KEY": apiKey,
-        "Content-Type": "application/json",
+    const response = await this.helpers.httpRequestWithAuthentication.call(
+      this,
+      "aqtosApi",
+      {
+        method: "GET",
+        url: `${baseURL}/taskCategory/all`,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        qs: {
+          projectId: projectId,
+        },
       },
-      qs: {
-        projectId: projectId,
-      },
-    });
+    );
 
     const categories = Array.isArray(response)
       ? response
@@ -264,8 +284,10 @@ export async function loadTaskCategories(
         `${category.id}`,
       value: (category.id as string) || (category.categoryId as string),
     }));
-  } catch {
-    return [];
+  } catch (error) {
+    throw new NodeOperationError(this.getNode(), error as Error, {
+      message: `Failed to load task categories from ${baseURL}/taskCategory/all`,
+    });
   }
 }
 
@@ -273,18 +295,20 @@ export async function loadExpenseCategories(
   this: ILoadOptionsFunctions
 ): Promise<INodePropertyOptions[]> {
   const credentials = await this.getCredentials("aqtosApi");
-  const apiKey = credentials.apiKey as string;
   const baseURL = getBaseURL(credentials);
 
   try {
-    const response = await this.helpers.httpRequest({
-      method: "GET",
-      url: `${baseURL}/finance/expenseCategory/all`,
-      headers: {
-        "X-API-KEY": apiKey,
-        "Content-Type": "application/json",
+    const response = await this.helpers.httpRequestWithAuthentication.call(
+      this,
+      "aqtosApi",
+      {
+        method: "GET",
+        url: `${baseURL}/finance/expenseCategory/all`,
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
 
     const categories = Array.isArray(response)
       ? response
@@ -297,8 +321,10 @@ export async function loadExpenseCategories(
         `${category.id}`,
       value: (category.id as string) || (category.categoryId as string),
     }));
-  } catch {
-    return [];
+  } catch (error) {
+    throw new NodeOperationError(this.getNode(), error as Error, {
+      message: `Failed to load expense categories from ${baseURL}/finance/expenseCategory/all`,
+    });
   }
 }
 
@@ -306,18 +332,20 @@ export async function loadVendors(
   this: ILoadOptionsFunctions
 ): Promise<INodePropertyOptions[]> {
   const credentials = await this.getCredentials("aqtosApi");
-  const apiKey = credentials.apiKey as string;
   const baseURL = getBaseURL(credentials);
 
   try {
-    const response = await this.helpers.httpRequest({
-      method: "GET",
-      url: `${baseURL}/vendor/all`,
-      headers: {
-        "X-API-KEY": apiKey,
-        "Content-Type": "application/json",
+    const response = await this.helpers.httpRequestWithAuthentication.call(
+      this,
+      "aqtosApi",
+      {
+        method: "GET",
+        url: `${baseURL}/vendor/all`,
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
 
     const vendors = Array.isArray(response)
       ? response
@@ -329,41 +357,10 @@ export async function loadVendors(
         `${vendor.id}`,
       value: (vendor.id as string) || (vendor.vendorId as string),
     }));
-  } catch {
-    return [];
-  }
-}
-
-export async function loadAccounts(
-  this: ILoadOptionsFunctions
-): Promise<INodePropertyOptions[]> {
-  const credentials = await this.getCredentials("aqtosApi");
-  const apiKey = credentials.apiKey as string;
-  const baseURL = getBaseURL(credentials);
-
-  try {
-    const response = await this.helpers.httpRequest({
-      method: "GET",
-      url: `${baseURL}/contact/all`,
-      headers: {
-        "X-API-KEY": apiKey,
-        "Content-Type": "application/json",
-      },
+  } catch (error) {
+    throw new NodeOperationError(this.getNode(), error as Error, {
+      message: `Failed to load vendors from ${baseURL}/vendor/all`,
     });
-
-    const accounts = Array.isArray(response)
-      ? response
-      : response?.data || response?.content || [];
-    return accounts.map((account: Record<string, unknown>) => ({
-      name:
-        (account.name as string) ||
-        (account.accountName as string) ||
-        (account.email as string) ||
-        `${account.id}`,
-      value: (account.id as string) || (account.accountId as string),
-    }));
-  } catch {
-    return [];
   }
 }
 
@@ -371,18 +368,20 @@ export async function loadLanguages(
   this: ILoadOptionsFunctions
 ): Promise<INodePropertyOptions[]> {
   const credentials = await this.getCredentials("aqtosApi");
-  const apiKey = credentials.apiKey as string;
   const baseURL = getBaseURL(credentials);
 
   try {
-    const response = await this.helpers.httpRequest({
-      method: "GET",
-      url: `${baseURL}/language/list`,
-      headers: {
-        "X-API-KEY": apiKey,
-        "Content-Type": "application/json",
+    const response = await this.helpers.httpRequestWithAuthentication.call(
+      this,
+      "aqtosApi",
+      {
+        method: "GET",
+        url: `${baseURL}/language/list`,
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
 
     const languages = Array.isArray(response)
       ? response
@@ -395,8 +394,10 @@ export async function loadLanguages(
         `${language.id}`,
       value: (language.id as string) || (language.languageId as string),
     }));
-  } catch {
-    return [];
+  } catch (error) {
+    throw new NodeOperationError(this.getNode(), error as Error, {
+      message: `Failed to load languages from ${baseURL}/language/list`,
+    });
   }
 }
 
@@ -404,18 +405,20 @@ export async function loadContactViews(
   this: ILoadOptionsFunctions
 ): Promise<INodePropertyOptions[]> {
   const credentials = await this.getCredentials("aqtosApi");
-  const apiKey = credentials.apiKey as string;
   const baseURL = getBaseURL(credentials);
 
   try {
-    const response = await this.helpers.httpRequest({
-      method: "GET",
-      url: `${baseURL}/contact/all`,
-      headers: {
-        "X-API-KEY": apiKey,
-        "Content-Type": "application/json",
+    const response = await this.helpers.httpRequestWithAuthentication.call(
+      this,
+      "aqtosApi",
+      {
+        method: "GET",
+        url: `${baseURL}/contact/all`,
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
 
     const views = Array.isArray(response)
       ? response
@@ -428,8 +431,10 @@ export async function loadContactViews(
         `${view.id}`,
       value: (view.id as string) || (view.viewId as string),
     }));
-  } catch {
-    return [];
+  } catch (error) {
+    throw new NodeOperationError(this.getNode(), error as Error, {
+      message: `Failed to load contact views from ${baseURL}/contact/all`,
+    });
   }
 }
 
@@ -437,18 +442,20 @@ export async function loadTasks(
   this: ILoadOptionsFunctions
 ): Promise<INodePropertyOptions[]> {
   const credentials = await this.getCredentials("aqtosApi");
-  const apiKey = credentials.apiKey as string;
   const baseURL = getBaseURL(credentials);
 
   try {
-    const response = await this.helpers.httpRequest({
-      method: "GET",
-      url: `${baseURL}/task/list`,
-      headers: {
-        "X-API-KEY": apiKey,
-        "Content-Type": "application/json",
+    const response = await this.helpers.httpRequestWithAuthentication.call(
+      this,
+      "aqtosApi",
+      {
+        method: "GET",
+        url: `${baseURL}/task/list`,
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
 
     const tasks = Array.isArray(response)
       ? response
@@ -457,8 +464,10 @@ export async function loadTasks(
       name: (task.title as string) || (task.name as string) || `${task.id}`,
       value: (task.id as string) || (task.taskId as string),
     }));
-  } catch {
-    return [];
+  } catch (error) {
+    throw new NodeOperationError(this.getNode(), error as Error, {
+      message: `Failed to load tasks from ${baseURL}/task/list`,
+    });
   }
 }
 
@@ -466,18 +475,20 @@ export async function loadOwnerAccounts(
   this: ILoadOptionsFunctions
 ): Promise<INodePropertyOptions[]> {
   const credentials = await this.getCredentials("aqtosApi");
-  const apiKey = credentials.apiKey as string;
   const baseURL = getBaseURL(credentials);
 
   try {
-    const response = await this.helpers.httpRequest({
-      method: "GET",
-      url: `${baseURL}/finance/ownerAccount/all`,
-      headers: {
-        "X-API-KEY": apiKey,
-        "Content-Type": "application/json",
+    const response = await this.helpers.httpRequestWithAuthentication.call(
+      this,
+      "aqtosApi",
+      {
+        method: "GET",
+        url: `${baseURL}/finance/ownerAccount/all`,
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
 
     const ownerAccounts = Array.isArray(response)
       ? response
@@ -490,8 +501,10 @@ export async function loadOwnerAccounts(
         `${account.id}`,
       value: (account.id as string) || (account.accountId as string),
     }));
-  } catch {
-    return [];
+  } catch (error) {
+    throw new NodeOperationError(this.getNode(), error as Error, {
+      message: `Failed to load owner accounts from ${baseURL}/finance/ownerAccount/all`,
+    });
   }
 }
 
@@ -499,18 +512,20 @@ export async function loadClientContacts(
   this: ILoadOptionsFunctions
 ): Promise<INodePropertyOptions[]> {
   const credentials = await this.getCredentials("aqtosApi");
-  const apiKey = credentials.apiKey as string;
   const baseURL = getBaseURL(credentials);
 
   try {
-    const response = await this.helpers.httpRequest({
-      method: "GET",
-      url: `${baseURL}/client/all`,
-      headers: {
-        "X-API-KEY": apiKey,
-        "Content-Type": "application/json",
+    const response = await this.helpers.httpRequestWithAuthentication.call(
+      this,
+      "aqtosApi",
+      {
+        method: "GET",
+        url: `${baseURL}/client/all`,
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
 
     const clientViews = Array.isArray(response)
       ? response
@@ -543,7 +558,9 @@ export async function loadClientContacts(
       }
     }
     return clientContacts;
-  } catch {
-    return [];
+  } catch (error) {
+    throw new NodeOperationError(this.getNode(), error as Error, {
+      message: `Failed to load client contacts from ${baseURL}/client/all`,
+    });
   }
 }

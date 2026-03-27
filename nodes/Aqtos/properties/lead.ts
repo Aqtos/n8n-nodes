@@ -88,7 +88,7 @@ export const leadProperties: INodeProperties[] = [
     },
     default: "",
     description:
-      "Choose from the list, or specify an ID using an <a href='https://docs.n8n.io/code/expressions/'>expression</a>. Choose from the list, or specify an ID using an <a href=\"https://docs.n8n.io/code/expressions/\">expression</a>.",
+      'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
   },
   {
     displayName: "Company Name or ID",
@@ -166,7 +166,7 @@ export const leadProperties: INodeProperties[] = [
     },
     default: "",
     description:
-      "Choose from the list, or specify an ID using an <a href='https://docs.n8n.io/code/expressions/'>expression</a>. Choose from the list, or specify an ID using an <a href=\"https://docs.n8n.io/code/expressions/\">expression</a>.",
+      'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
   },
   {
     displayName: "Job Title",

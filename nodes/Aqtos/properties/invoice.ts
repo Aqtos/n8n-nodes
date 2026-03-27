@@ -59,12 +59,12 @@ export const invoiceProperties: INodeProperties[] = [
     },
     options: [
       {
-        name: "Sending",
-        value: "SENDING",
-      },
-      {
         name: "Receiving",
         value: "RECEIVING",
+      },
+      {
+        name: "Sending",
+        value: "SENDING",
       },
     ],
     default: "SENDING",
