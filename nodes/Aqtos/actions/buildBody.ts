@@ -90,13 +90,7 @@ export function buildLeadBody(ctx: IExecuteFunctions, i: number): Body {
 export function buildTaskBody(ctx: IExecuteFunctions, i: number): Body {
   const body: Body = {};
 
-  const parent = getOptionalString(ctx, "taskParent", i);
-  if (parent) body.parent = parent;
-
   body.projectId = (ctx.getNodeParameter("taskProjectId", i, "") as string) || "";
-
-  const creator = getOptionalString(ctx, "taskCreator", i);
-  if (creator) body.creator = creator;
 
   body.title = (ctx.getNodeParameter("taskTitle", i, "") as string) || "";
 

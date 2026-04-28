@@ -56,12 +56,12 @@ export const taskProperties: INodeProperties[] = [
         value: "HIGH",
       },
       {
-        name: "Medium",
-        value: "MEDIUM",
-      },
-      {
         name: "Low",
         value: "LOW",
+      },
+      {
+        name: "Medium",
+        value: "MEDIUM",
       },
     ],
     default: "MEDIUM",

@@ -63,39 +63,6 @@ export const commonProperties: INodeProperties[] = [
     required: true,
   },
   {
-    displayName: "Headers",
-    name: "headers",
-    type: "fixedCollection",
-    typeOptions: {
-      multipleValues: true,
-    },
-    default: {},
-    placeholder: "Add Header",
-    options: [
-      {
-        displayName: "Headers",
-        name: "headers",
-        values: [
-          {
-            displayName: "Name",
-            name: "name",
-            type: "string",
-            default: "",
-            description: "The name of the header",
-          },
-          {
-            displayName: "Value",
-            name: "value",
-            type: "string",
-            default: "",
-            description: "The value of the header",
-          },
-        ],
-      },
-    ],
-    description: "Headers to send with the request",
-  },
-  {
     displayName: "Body Input Method",
     name: "bodyContentType",
     type: "options",
