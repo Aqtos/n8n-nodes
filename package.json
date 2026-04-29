@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-aqtos",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "Aqtos API node for n8n",
   "license": "MIT",
   "homepage": "https://aqtos.com",
@@ -38,7 +38,7 @@
     ]
   },
   "devDependencies": {
-    "@n8n/node-cli": "^0.17.0",
+    "@n8n/node-cli": "^0.23.0",
     "eslint": "9.32.0",
     "prettier": "3.6.2",
     "release-it": "^19.0.4",

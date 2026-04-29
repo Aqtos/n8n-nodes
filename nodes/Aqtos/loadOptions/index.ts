@@ -1,5 +1,5 @@
-import { NodeOperationError } from "n8n-workflow";
-import type { ILoadOptionsFunctions, INodePropertyOptions } from "n8n-workflow";
+import type { ILoadOptionsFunctions, INodePropertyOptions, JsonObject } from "n8n-workflow";
+import { NodeApiError } from "n8n-workflow";
 import { getBaseURL } from "../utils/helpers";
 
 export async function loadCompanies(
@@ -51,9 +51,7 @@ export async function loadCompanies(
       };
     });
   } catch (error) {
-    throw new NodeOperationError(this.getNode(), error as Error, {
-      message: `Failed to load companies from ${baseURL}/company/list`,
-    });
+    throw new NodeApiError(this.getNode(), error as JsonObject);
   }
 }
 
@@ -96,9 +94,7 @@ export async function loadPersons(
       };
     });
   } catch (error) {
-    throw new NodeOperationError(this.getNode(), error as Error, {
-      message: `Failed to load persons from ${baseURL}/person/list`,
-    });
+    throw new NodeApiError(this.getNode(), error as JsonObject);
   }
 }
 
@@ -133,9 +129,7 @@ export async function loadProjects(
       value: (project.id as string) || (project.projectId as string),
     }));
   } catch (error) {
-    throw new NodeOperationError(this.getNode(), error as Error, {
-      message: `Failed to load projects from ${baseURL}/projects/all`,
-    });
+    throw new NodeApiError(this.getNode(), error as JsonObject);
   }
 }
 
@@ -181,9 +175,7 @@ export async function loadTaskStatuses(
       value: (status.id as string) || (status.statusId as string),
     }));
   } catch (error) {
-    throw new NodeOperationError(this.getNode(), error as Error, {
-      message: `Failed to load task statuses from ${baseURL}/taskStatus/all`,
-    });
+    throw new NodeApiError(this.getNode(), error as JsonObject);
   }
 }
 
@@ -237,9 +229,7 @@ export async function loadProjectPeople(
       };
     });
   } catch (error) {
-    throw new NodeOperationError(this.getNode(), error as Error, {
-      message: `Failed to load project people from ${baseURL}/projects/people`,
-    });
+    throw new NodeApiError(this.getNode(), error as JsonObject);
   }
 }
 
@@ -285,9 +275,7 @@ export async function loadTaskCategories(
       value: (category.id as string) || (category.categoryId as string),
     }));
   } catch (error) {
-    throw new NodeOperationError(this.getNode(), error as Error, {
-      message: `Failed to load task categories from ${baseURL}/taskCategory/all`,
-    });
+    throw new NodeApiError(this.getNode(), error as JsonObject);
   }
 }
 
@@ -322,9 +310,7 @@ export async function loadExpenseCategories(
       value: (category.id as string) || (category.categoryId as string),
     }));
   } catch (error) {
-    throw new NodeOperationError(this.getNode(), error as Error, {
-      message: `Failed to load expense categories from ${baseURL}/finance/expenseCategory/all`,
-    });
+    throw new NodeApiError(this.getNode(), error as JsonObject);
   }
 }
 
@@ -358,9 +344,7 @@ export async function loadVendors(
       value: (vendor.id as string) || (vendor.vendorId as string),
     }));
   } catch (error) {
-    throw new NodeOperationError(this.getNode(), error as Error, {
-      message: `Failed to load vendors from ${baseURL}/vendor/all`,
-    });
+    throw new NodeApiError(this.getNode(), error as JsonObject);
   }
 }
 
@@ -395,9 +379,7 @@ export async function loadLanguages(
       value: (language.id as string) || (language.languageId as string),
     }));
   } catch (error) {
-    throw new NodeOperationError(this.getNode(), error as Error, {
-      message: `Failed to load languages from ${baseURL}/language/list`,
-    });
+    throw new NodeApiError(this.getNode(), error as JsonObject);
   }
 }
 
@@ -432,9 +414,7 @@ export async function loadContactViews(
       value: (view.id as string) || (view.viewId as string),
     }));
   } catch (error) {
-    throw new NodeOperationError(this.getNode(), error as Error, {
-      message: `Failed to load contact views from ${baseURL}/contact/all`,
-    });
+    throw new NodeApiError(this.getNode(), error as JsonObject);
   }
 }
 
@@ -465,9 +445,7 @@ export async function loadTasks(
       value: (task.id as string) || (task.taskId as string),
     }));
   } catch (error) {
-    throw new NodeOperationError(this.getNode(), error as Error, {
-      message: `Failed to load tasks from ${baseURL}/task/list`,
-    });
+    throw new NodeApiError(this.getNode(), error as JsonObject);
   }
 }
 
@@ -502,9 +480,7 @@ export async function loadOwnerAccounts(
       value: (account.id as string) || (account.accountId as string),
     }));
   } catch (error) {
-    throw new NodeOperationError(this.getNode(), error as Error, {
-      message: `Failed to load owner accounts from ${baseURL}/finance/ownerAccount/all`,
-    });
+    throw new NodeApiError(this.getNode(), error as JsonObject);
   }
 }
 
@@ -559,8 +535,6 @@ export async function loadClientContacts(
     }
     return clientContacts;
   } catch (error) {
-    throw new NodeOperationError(this.getNode(), error as Error, {
-      message: `Failed to load client contacts from ${baseURL}/client/all`,
-    });
+    throw new NodeApiError(this.getNode(), error as JsonObject);
   }
 }

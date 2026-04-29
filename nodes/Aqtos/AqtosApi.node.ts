@@ -4,7 +4,8 @@ import type {
   INodeType,
   INodeTypeDescription,
 } from "n8n-workflow";
-import { ApplicationError, NodeConnectionTypes, NodeOperationError } from "n8n-workflow";
+import type { JsonObject } from "n8n-workflow";
+import { ApplicationError, NodeApiError, NodeConnectionTypes } from "n8n-workflow";
 
 import * as loadOptions from "./loadOptions";
 import { allProperties } from "./properties";
@@ -113,7 +114,7 @@ export class AqtosApi implements INodeType {
           });
           continue;
         }
-        throw new NodeOperationError(this.getNode(), error as Error, { itemIndex: i });
+        throw new NodeApiError(this.getNode(), error as JsonObject, { itemIndex: i });
       }
     }
 
